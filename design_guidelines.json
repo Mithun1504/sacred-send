@@ -1,0 +1,183 @@
+{
+  "app_name": "Emergency Cremation & Funeral Planner",
+  "personality": "Custom Fusion: Empathy-First Utility (Clean iOS structure with Soft/Warm typography and coloring)",
+  "personality_one_liner": "A calm, zero-friction, incredibly gentle digital companion for someone experiencing the worst day of their life.",
+  "color": {
+    "surface": "#FAF8F5",
+    "onSurface": "#2C302E",
+    "surfaceSecondary": "#F2EFE9",
+    "onSurfaceSecondary": "#3A3F3C",
+    "surfaceTertiary": "#EAE5DB",
+    "onSurfaceTertiary": "#4B504C",
+    "surfaceInverse": "#2C302E",
+    "onSurfaceInverse": "#FAF8F5",
+    "brand": "#7B9B82",
+    "brandPrimary": "#7B9B82",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#9CB6A1",
+    "onBrandSecondary": "#1E2B22",
+    "brandTertiary": "#DCE5DE",
+    "onBrandTertiary": "#2C4032",
+    "success": "#7B9B82",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D99C5B",
+    "onWarning": "#FFFFFF",
+    "error": "#C97A7E",
+    "onError": "#FFFFFF",
+    "info": "#8CA5A5",
+    "onInfo": "#FFFFFF",
+    "border": "#E3DDD3",
+    "borderStrong": "#CCC4B6",
+    "divider": "#E3DDD3"
+  },
+  "typography": {
+    "displayFontFamily": "Nunito",
+    "textFontFamily": "Nunito",
+    "scale": {
+      "sm": 14,
+      "base": 16,
+      "lg": 18,
+      "xl": 24,
+      "2xl": 28
+    }
+  },
+  "spacing": {
+    "rule": "Generous line spacing (1.5x minimum). Single column. Avoid cramped layouts. Generous padding around touch targets.",
+    "xs": 8,
+    "sm": 12,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 48,
+    "3xl": 64
+  },
+  "radius_tokens": {
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "stack_only",
+  "icon_set": "Feather",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [],
+    "dont's": ["No glassmorphism. Keep surfaces opaque, solid, and extremely legible to reduce cognitive overload."]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-blur",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Landing",
+      "purpose": "Offer immediate, un-intimidating entry into the app with a single prominent action.",
+      "states": {
+        "loading": "Centered spinner, no text.",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full screen with abstract soft texture background. No logo animation. One primary button 'Start — I need help right now' locked in the bottom third of the screen (easy thumb reach). Calm one-line subtext. Optional 'Continue where I left off' text link below."
+    },
+    {
+      "name": "QuickSetup",
+      "purpose": "Gather crucial context (Location, Death place, Religion) in under 20 seconds without overwhelming.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "Soft inline validation if location fails."
+      },
+      "layout": "3-step wizard with quiet progress dots at top. One question per screen. Big, touch-friendly cards (minimum 48pt height) for options (e.g., Hospital, Home). 'Skip' option always visible. Sticky 'Next' button at bottom."
+    },
+    {
+      "name": "ChecklistHome",
+      "purpose": "The core hub organizing immediate tasks versus later tasks, giving a sense of control.",
+      "states": {
+        "loading": "Skeleton rows of tasks.",
+        "empty": "N/A - dynamically populated by setup.",
+        "error": "N/A"
+      },
+      "layout": "Top calm progress bar ('3 of 9 steps done' - no percentages). Sections: 'Right Now' (auto-expanded), 'Today', 'Next Few Days' (collapsed). Task rows: plain icon, short label, status indicator. Floating 'Call for Help' button anchored bottom-right. Single-column list."
+    },
+    {
+      "name": "TaskDetail",
+      "purpose": "Provide exact, actionable steps and context for a single task without distractions.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Plain-language title. Collapsible 'Why this is needed' section to hide wall of text. Document checklist (if applicable). Huge green 'Call Now' buttons (tel: intent) for authorities/hospitals. Single, large 'Mark as done' CTA at bottom with a quiet checkmark (no confetti/celebration)."
+    },
+    {
+      "name": "ContactsHub",
+      "purpose": "Quick access to essential phone numbers (Ambulance, Mortuary, Priest/Officiant, Family).",
+      "states": {
+        "loading": "N/A",
+        "empty": "Illustration of a phone book, 'No contacts added yet'.",
+        "error": "N/A"
+      },
+      "layout": "Flat, single-column list of large cards. Each card has Name/Role and a prominent 'Call' button on the right edge. Accessible one-handed."
+    },
+    {
+      "name": "DocumentVault",
+      "purpose": "Securely store photos of critical documents (Death Certificate, ID).",
+      "states": {
+        "loading": "N/A",
+        "empty": "Outline of a document, 'Tap to take a photo of documents'.",
+        "error": "N/A"
+      },
+      "layout": "OTP-gated entry (mock UI). Camera-first upload cards (large tap target to open camera). Grid or list of thumbnails of uploaded docs."
+    },
+    {
+      "name": "FamilyShare",
+      "purpose": "Auto-generate a WhatsApp message to inform extended family without having to type while crying.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Preview of the auto-generated message text (warm, factual tone). One large primary button at bottom: 'Create update for family' that opens wa.me. Options to toggle language of message."
+    },
+    {
+      "name": "Settings",
+      "purpose": "Manage app state and language preferences safely.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Standard single-column list. Language toggle (English/Hindi/Tamil). 'Start new checklist' or 'Clear everything' tucked away at bottom with a confirmation sheet to prevent accidental presses."
+    }
+  ],
+  "images": {
+    "landing_background": {
+      "url": "https://images.unsplash.com/photo-1618763604262-6cbefa2a7b8e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHNvZnQlMjBzYW5kJTIwdGV4dHVyZSUyMHdhcm0lMjBuZXV0cmFsfGVufDB8fHx8MTc4MzMzNzM2MHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Soft sand abstract texture in warm neutral tones"
+    },
+    "general_accent_leaf": {
+      "url": "https://images.unsplash.com/photo-1611255550543-b5ecb01dfddc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwbXV0ZWQlMjBzYWdlJTIwZ3JlZW4lMjBsZWFmJTIwYWJzdHJhY3QlMjBwaG90b3xlbnwwfHx8fDE3ODMzMzczNjB8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist muted sage green leaf"
+    }
+  },
+  "instructions_to_main_agent": [
+    "STRICT RULE: Body font size MUST be minimum 16px. Do NOT use smaller fonts for primary readability.",
+    "STRICT RULE: Dark mode is absolutely banned. The UI must remain in a soft, warm light theme only.",
+    "STRICT RULE: All tap targets must be a minimum of 48x48 points. Space them generously.",
+    "STRICT RULE: Do not use any celebratory animations, bouncy transitions, badges, streaks, or confetti. Motion should be incredibly minimal, slow, and steady.",
+    "STRICT RULE: Place primary CTAs in the bottom third of the screen to accommodate one-handed thumb use by a distracted user.",
+    "STRICT RULE: Use plain, second-person language (e.g., 'You are doing great', 'We need to know'). Avoid clinical, legalistic, or overly somber phrasing.",
+    "STRICT RULE: No religious or death-specific icons (no coffins, crosses, or skulls). Use neutral icons (documents, folders, phones).",
+    "LAYOUT RULE: Navigation is Stack only. No hamburger menus. No complicated bottom tab bars. Keep the cognitive load exceptionally low by relying on progressive disclosure.",
+    "Do NOT use glassmorphism or blur effects. Keep surfaces solid and highly legible to assist users in distress."
+  ]
+}
