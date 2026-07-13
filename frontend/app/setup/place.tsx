@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing, type } from '@/src/theme';
+import { colors, spacing, type, radius } from '@/src/theme';
 import { useI18n } from '@/src/i18n';
 import { loadSession, saveSession, emptySession, type Place } from '@/src/session';
 import { ProgressDots } from '@/src/components/ProgressDots';
@@ -13,11 +13,16 @@ export default function PlaceSetup() {
   const router = useRouter();
   const { t } = useI18n();
   const [place, setPlace] = useState<Place | null>(null);
+  const [unexpected, setUnexpected] = useState<boolean | null>(null);
 
   const next = async () => {
     if (!place) return;
     const existing = (await loadSession()) ?? emptySession();
-    await saveSession({ ...existing, place_of_death: place });
+    await saveSession({
+      ...existing,
+      place_of_death: place,
+      unexpected: unexpected === true,
+    });
     router.push('/setup/religion');
   };
 
@@ -57,6 +62,25 @@ export default function PlaceSetup() {
             testID="setup-place-other"
           />
         </View>
+
+        <View style={styles.unexpectedBlock}>
+          <Text style={styles.unexpectedTitle}>{t('unexpectedTitle')}</Text>
+          <Text style={styles.unexpectedHelp}>{t('unexpectedHelp')}</Text>
+          <View style={styles.unexpectedRow}>
+            <OptionCard
+              label={t('yes')}
+              selected={unexpected === true}
+              onPress={() => setUnexpected(true)}
+              testID="setup-unexpected-yes"
+            />
+            <OptionCard
+              label={t('no')}
+              selected={unexpected === false}
+              onPress={() => setUnexpected(false)}
+              testID="setup-unexpected-no"
+            />
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -86,6 +110,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   options: {
+    gap: spacing.xs,
+  },
+  unexpectedBlock: {
+    marginTop: spacing.xl,
+    padding: spacing.md,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+  },
+  unexpectedTitle: {
+    fontSize: type.lg,
+    color: colors.onSurface,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  unexpectedHelp: {
+    fontSize: type.sm,
+    color: colors.onSurfaceSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  unexpectedRow: {
     gap: spacing.xs,
   },
   footer: {

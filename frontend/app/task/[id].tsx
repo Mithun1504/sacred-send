@@ -7,8 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { colors, spacing, radius, type } from '@/src/theme';
 import { useI18n } from '@/src/i18n';
 import { loadSession, updateSession, type Session } from '@/src/session';
-import { api, type Task, type Contact } from '@/src/api';
-import { BackButton, PrimaryButton } from '@/src/components/Buttons';
+import { api, mapsSearchUrl, type Task } from '@/src/api';
+import { BackButton, PrimaryButton, GhostButton } from '@/src/components/Buttons';
 
 const DOC_LABELS: Record<string, string> = {
   aadhaar: 'docAadhaar',
@@ -23,9 +23,8 @@ export default function TaskDetail() {
   const { t } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
   const [task, setTask] = useState<Task | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [whyOpen, setWhyOpen] = useState(true);
-  const [showDone, setShowDone] = useState(false);
+  const [toast, setToast] = useState<'done' | 'skipped' | null>(null);
 
   const load = useCallback(async () => {
     const s = await loadSession();
@@ -35,13 +34,9 @@ export default function TaskDetail() {
     }
     setSession(s);
     try {
-      const res = await api.getChecklist(s.place_of_death, s.religion, s.location);
+      const res = await api.getChecklist(s.place_of_death, s.religion, s.location, s.unexpected);
       const found = res.tasks.find((tk) => tk.id === id);
       setTask(found ?? null);
-      if (found?.contacts.length) {
-        const c = await api.getContacts(s.religion, 99);
-        setContacts(c.contacts.filter((cc) => found.contacts.includes(cc.id) || found.contacts.includes(cc.category)));
-      }
     } catch (e) {
       console.warn(e);
     }
@@ -52,28 +47,37 @@ export default function TaskDetail() {
   }, [load]);
 
   const isDone = session && task ? session.doneTaskIds.includes(task.id) : false;
+  const isSkipped = session && task ? session.skippedTaskIds.includes(task.id) : false;
 
-  const toggleDone = async () => {
+  const setState = async (target: 'done' | 'skipped' | 'reset') => {
     if (!task || !session) return;
     const done = new Set(session.doneTaskIds);
-    if (done.has(task.id)) {
-      done.delete(task.id);
-      setShowDone(false);
-    } else {
+    const skipped = new Set(session.skippedTaskIds);
+    done.delete(task.id);
+    skipped.delete(task.id);
+    if (target === 'done') {
       done.add(task.id);
-      setShowDone(true);
+      setToast('done');
+    } else if (target === 'skipped') {
+      skipped.add(task.id);
+      setToast('skipped');
+    } else {
+      setToast(null);
     }
-    const inProg = new Set(session.inProgressTaskIds);
-    inProg.delete(task.id);
     const next = await updateSession({
       doneTaskIds: Array.from(done),
-      inProgressTaskIds: Array.from(inProg),
+      skippedTaskIds: Array.from(skipped),
     });
     setSession(next);
   };
 
   const call = (phone: string) => {
-    Linking.openURL(`tel:${phone}`);
+    Linking.openURL(`tel:${phone.replace(/[\s-]/g, '')}`);
+  };
+
+  const openMaps = () => {
+    if (!task?.maps_search) return;
+    Linking.openURL(mapsSearchUrl(task.maps_search, session?.location));
   };
 
   if (!task) {
@@ -99,6 +103,16 @@ export default function TaskDetail() {
         <Text style={styles.title} testID="task-detail-title">
           {task.title}
         </Text>
+
+        {task.urgency_note ? (
+          <View style={styles.urgencyBox} testID="task-urgency-note">
+            <Feather name="alert-circle" size={18} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.urgencyLabel}>{t('urgencyNote')}</Text>
+              <Text style={styles.urgencyText}>{task.urgency_note}</Text>
+            </View>
+          </View>
+        ) : null}
 
         <Pressable
           onPress={() => setWhyOpen((v) => !v)}
@@ -130,39 +144,63 @@ export default function TaskDetail() {
           </View>
         )}
 
-        {contacts.length > 0 && (
+        {task.maps_search ? (
           <View style={styles.section}>
-            {contacts.map((c) => (
+            <Pressable
+              onPress={openMaps}
+              style={({ pressed }) => [styles.mapsBtn, pressed && { opacity: 0.9 }]}
+              testID="task-open-maps"
+            >
+              <Feather name="map-pin" size={20} color={colors.brand} />
+              <Text style={styles.mapsBtnText}>{t('openInMaps')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {task.phones && task.phones.length > 0 && (
+          <View style={styles.section}>
+            {task.phones.map((p, i) => (
               <Pressable
-                key={c.id}
-                onPress={() => call(c.phone)}
+                key={i}
+                onPress={() => call(p.number)}
                 style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.9 }]}
-                testID={`task-call-${c.id}`}
+                testID={`task-call-${i}`}
               >
                 <Feather name="phone" size={20} color={colors.onBrandPrimary} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.callBtnLabel}>{t('callNow')} — {c.name}</Text>
-                  <Text style={styles.callBtnSub}>{c.phone}</Text>
+                  <Text style={styles.callBtnLabel}>{p.label}</Text>
+                  <Text style={styles.callBtnSub}>{p.number}</Text>
                 </View>
               </Pressable>
             ))}
           </View>
         )}
 
-        {showDone && isDone && (
+        {toast === 'done' && isDone && (
           <View style={styles.doneToast} testID="task-done-toast">
             <Feather name="check-circle" size={20} color={colors.brand} />
             <Text style={styles.doneToastText}>{t('taskDoneCaption')}</Text>
           </View>
         )}
+        {toast === 'skipped' && isSkipped && (
+          <View style={styles.skippedToast} testID="task-skipped-toast">
+            <Feather name="minus-circle" size={20} color={colors.onSurfaceSecondary} />
+            <Text style={styles.doneToastText}>{t('taskSkippedCaption')}</Text>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <PrimaryButton
-          label={isDone ? t('markUndone') : t('markDone')}
-          onPress={toggleDone}
-          testID="task-mark-done"
-        />
+        {isDone ? (
+          <PrimaryButton label={t('markUndone')} onPress={() => setState('reset')} testID="task-mark-done" />
+        ) : isSkipped ? (
+          <PrimaryButton label={t('undoSkip')} onPress={() => setState('reset')} testID="task-mark-done" />
+        ) : (
+          <>
+            <PrimaryButton label={t('markDone')} onPress={() => setState('done')} testID="task-mark-done" />
+            <GhostButton label={t('skipTask')} onPress={() => setState('skipped')} testID="task-skip" />
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -190,6 +228,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.lg,
     lineHeight: 34,
+  },
+  urgencyBox: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: '#FBF1E4',
+    borderWidth: 1,
+    borderColor: colors.warning,
+    marginBottom: spacing.md,
+  },
+  urgencyLabel: {
+    fontSize: type.sm,
+    color: colors.warning,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  urgencyText: {
+    fontSize: type.base,
+    color: colors.onSurface,
+    lineHeight: 22,
+    marginTop: 2,
   },
   whyToggle: {
     flexDirection: 'row',
@@ -226,6 +287,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   docText: { fontSize: type.base, color: colors.onSurface },
+  mapsBtn: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 56,
+    justifyContent: 'center',
+    backgroundColor: colors.brandTertiary,
+  },
+  mapsBtnText: { color: colors.onBrandTertiary, fontSize: type.base, fontWeight: '600' },
   callBtn: {
     backgroundColor: colors.brandPrimary,
     borderRadius: radius.md,
@@ -247,6 +321,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  doneToastText: { color: colors.onBrandTertiary, fontSize: type.base, fontWeight: '500' },
-  footer: { padding: spacing.lg },
+  skippedToast: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSecondary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  doneToastText: { color: colors.onBrandTertiary, fontSize: type.base, fontWeight: '500', flex: 1 },
+  footer: { padding: spacing.lg, gap: 4 },
 });

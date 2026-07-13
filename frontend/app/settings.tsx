@@ -143,6 +143,7 @@ export default function Settings() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet} testID="settings-clear-confirm">
             <Text style={styles.modalTitle}>{t('clearConfirm')}</Text>
+            <Text style={styles.modalSubtitle}>This cannot be undone.</Text>
             <PrimaryButton label={t('yesClear')} onPress={doClear} testID="settings-clear-yes" />
             <GhostButton
               label={t('cancel')}
@@ -239,7 +240,13 @@ const styles = StyleSheet.create({
     fontSize: type.lg,
     color: colors.onSurface,
     fontWeight: '600',
-    marginBottom: spacing.md,
+    marginBottom: 6,
     textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: type.sm,
+    color: colors.onSurfaceSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
   },
 });

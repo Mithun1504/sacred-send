@@ -1,0 +1,42 @@
+{
+  "summary": "Comprehensive backend + mobile UI testing of the Emergency Cremation & Funeral Planner (v2). 23/23 backend tests pass (checklist religion branching, invalid-number checks, OTP mock, vault _id/base64 hiding, share i18n). Mobile UI verified end-to-end on 375x667 viewport — landing copy, 3-step setup with unexpected-death branch, 5-phase checklist (14 tasks for muslim+home+unexpected), task detail with urgency box + Mark done / Not for us buttons, contacts hub with 8 verified national numbers + local search cards, settings (EN/HI/TA), and 'Continue where I left off' session persistence all work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "checklist", "issues": ["Progress framing is gentle in initial state ('14 things to look at, a few at a time') but reverts to 'X done · Y skipped · Z left' once any task is marked — arguably still counter-y. Not a blocker but E1 may want fully gentle framing throughout."]}
+    ],
+    "react_native_issues": [
+      {"component": "styles (multiple screens)", "issue": "React Native Web deprecation warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' emitted from theme.shadow.card. Non-breaking on web but should migrate to boxShadow / react-native's new shadow API. Reference: /app/frontend/src/theme.ts (shadow.card) and any consumers (checklist FAB, quick bar)."},
+      {"component": "expo-notifications", "issue": "Console warning: '[expo-notifications] Listening to push token changes is not yet fully supported on web.' Reminder setup registers a token listener that no-ops on web — safe on native but noisy; consider guarding with Platform.OS !== 'web'."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_emergency_planner.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Extend 'gentle framing' progress text to also cover the in-progress state on /checklist instead of 'X done · Y skipped · Z left'.",
+    "(Optional) Migrate theme.shadow.* to boxShadow or Platform.select to silence RN Web deprecation warnings.",
+    "(Optional) Guard expo-notifications token listener with Platform.OS check to avoid web warning."
+  ],
+  "critical_code_review_comments": [
+    "server.py cleanly excludes _id and data_base64 from GET /api/vault via projection — correct.",
+    "urgency_note only attached to first right_now task for religions that define it (muslim). Verified working for police-report when unexpected=true+muslim.",
+    "No invalid legacy numbers (1912/1099/1077/1800111xxx) present in checklist or contacts responses.",
+    "OTP verify is a fixed mock accepting only '123456' — clearly labelled and safe for demo."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_emergency_planner.py (new)"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "One TEST_aadhaar.jpg doc uploaded to vault under an ephemeral session_id during test (no cleanup needed — mock session).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend URL: https://sacred-send.preview.emergentagent.com. Fixed OTP: 123456. Run: pytest /app/backend/tests/test_emergency_planner.py -v. Frontend flow verified: Landing → Location → Place(+unexpected) → Religion → Checklist → Task detail. Session state uses AsyncStorage (localStorage on web) so 'Continue where I left off' only appears in the same browser context.",
+  "rca_of_issue": "N/A — all 11 previously-reported issues have been fixed and verified in this iteration."
+}

@@ -1,23 +1,34 @@
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+export interface Phone {
+  label: string;
+  number: string;
+}
+
 export interface Task {
   id: string;
-  phase: 'right_now' | 'today' | 'next_few_days' | 'next_few_weeks';
+  phase: 'right_now' | 'today' | 'next_few_days' | 'next_few_weeks' | 'coming_months';
   title: string;
   short_label: string;
   icon: string;
   why: string;
   documents: string[];
-  contacts: string[];
+  phones: Phone[];
+  maps_search: string | null;
+  urgency_note?: string;
 }
 
-export interface Contact {
+export interface NationalContact {
   id: string;
   name: string;
-  role: string;
-  category: string;
   phone: string;
-  day_one_only: boolean;
+  note: string | null;
+}
+
+export interface LocalSearch {
+  id: string;
+  label: string;
+  query: string;
 }
 
 async function post<T>(path: string, body: any): Promise<T> {
@@ -37,14 +48,15 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const api = {
-  async getChecklist(place_of_death: string, religion: string | null, location?: string) {
-    return post<{ tasks: Task[] }>('/checklist', { place_of_death, religion, location });
+  async getChecklist(place_of_death: string, religion: string | null, location?: string, unexpected?: boolean) {
+    return post<{ tasks: Task[] }>('/checklist', { place_of_death, religion, location, unexpected: !!unexpected });
   },
-  async getContacts(religion: string | null, day: number = 0) {
+  async getContacts(religion: string | null) {
     const q = new URLSearchParams();
     if (religion) q.set('religion', religion);
-    q.set('day', String(day));
-    return get<{ contacts: Contact[] }>(`/contacts?${q.toString()}`);
+    return get<{ national: NationalContact[]; local_searches: LocalSearch[] }>(
+      `/contacts?${q.toString()}`
+    );
   },
   async sendOtp(phone: string) {
     return post<{ success: boolean; mock_code: string }>('/otp/send', { phone });
@@ -73,3 +85,8 @@ export const api = {
     return post<{ message: string }>('/share/message', payload);
   },
 };
+
+export function mapsSearchUrl(query: string, location?: string): string {
+  const q = location ? `${query} near ${location}` : `${query} near me`;
+  return `https://www.google.com/maps/search/${encodeURIComponent(q)}`;
+}

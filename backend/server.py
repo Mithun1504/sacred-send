@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
@@ -27,27 +27,7 @@ class ChecklistRequest(BaseModel):
     location: Optional[str] = None
     place_of_death: str  # "hospital" | "home" | "other"
     religion: Optional[str] = None  # "hindu" | "muslim" | "christian" | "sikh" | "secular" | None
-
-
-class TaskDoc(BaseModel):
-    id: str
-    phase: str  # "right_now" | "today" | "next_few_days" | "next_few_weeks"
-    title: str
-    short_label: str
-    icon: str
-    why: str
-    documents: List[str] = []
-    contacts: List[str] = []  # contact category ids
-    religion_note: Optional[str] = None
-
-
-class Contact(BaseModel):
-    id: str
-    name: str
-    role: str
-    category: str
-    phone: str
-    day_one_only: bool = False
+    unexpected: bool = False
 
 
 class OTPRequest(BaseModel):
@@ -61,85 +41,155 @@ class OTPVerify(BaseModel):
 
 class VaultUpload(BaseModel):
     session_id: str
-    doc_type: str  # aadhaar | id_proof | insurance | hospital
+    doc_type: str
     filename: str
     data_base64: str
 
 
-# ---------------- Task Templates ----------------
-def build_tasks(place: str, religion: Optional[str]) -> List[Dict[str, Any]]:
-    r = (religion or "secular").lower()
+# ---------------- Religion Content Table ----------------
+# Verified national numbers only. Everything hyper-local uses maps_search.
+POLICE = {"label": "Call police", "number": "100"}
+UNIFIED = {"label": "Unified emergency", "number": "112"}
+AMBULANCE_108 = {"label": "Ambulance", "number": "108"}
+AMBULANCE_102 = {"label": "Ambulance", "number": "102"}
+IRDAI_GRIEVANCE = {"label": "IRDAI grievance (only if insurer unresponsive)", "number": "155255"}
+LIC_HELPLINE = {"label": "LIC helpline", "number": "1800-227-717"}
+SENIOR_HELPLINE = {"label": "Senior citizens helpline", "number": "14567"}
 
-    religion_rite = {
-        "hindu": {
-            "title": "Arrange priest for last rites",
-            "why": "A pandit will guide the family through the antim sanskar (final rites) and mantras at the cremation ground. Booking early ensures the family can perform rites at the right muhurta.",
-        },
-        "muslim": {
-            "title": "Contact imam for Ghusl and Janazah",
-            "why": "In Islamic tradition, burial is done as soon as possible, usually within 24 hours. The imam will help arrange Ghusl (ritual washing), Kafan (shrouding), and Janazah prayer.",
-        },
-        "christian": {
-            "title": "Contact priest for last rites and funeral",
-            "why": "The parish priest will arrange the funeral service, prayers, and burial or cremation according to your denomination's tradition.",
-        },
-        "sikh": {
-            "title": "Arrange Granthi and Antim Ardas",
-            "why": "A Granthi from the local Gurdwara will help with the Antim Ardas (final prayer) and reading of the Kirtan Sohila. Cremation is preferred within a day.",
-        },
-        "secular": {
-            "title": "Choose a farewell for your family",
-            "why": "You can hold a simple, non-religious farewell — a moment of silence, favorite music, or shared memories. There is no right or wrong way.",
-        },
-    }[r]
 
-    hospital_only = place == "hospital"
+RELIGION_CONTENT: Dict[str, Dict[str, Any]] = {
+    "hindu": {
+        "rites_title": "Contact a pandit for antim sanskar",
+        "rites_why": "A pandit will guide the family through the antim sanskar (final rites) and mantras. Some families prefer the eldest son or closest relative to perform the rites with the pandit's guidance. Practices vary by community and region — confirm with your family or local temple.",
+        "rites_search": "hindu temple pandit",
+        "booking_title": "Book a cremation slot",
+        "booking_why": "Cremation is customary, ideally within 24 hours. In most cities you can choose between a wood pyre or an electric/CNG crematorium — electric is faster and lower cost, and often more widely available in urban areas.",
+        "booking_search": "cremation ground",
+        "ashes": True,
+        "ashes_title": "Collect the ashes (asthi)",
+        "ashes_why": "Ashes are usually available 24 to 48 hours after cremation, from the crematorium. Many families later immerse them in a river — this can happen when you are ready, not immediately.",
+        "urgency_note": None,
+    },
+    "muslim": {
+        "rites_title": "Contact the local mosque or qabristan committee",
+        "rites_why": "Ghusl (ritual washing) and kafan (shrouding) are done by trained community members, usually arranged through the local mosque or qabristan committee. Janazah (funeral prayer) is held at the mosque or graveyard before burial. Please note: burial is ideally done within 24 hours in most communities.",
+        "rites_search": "mosque",
+        "booking_title": "Contact the qabristan for a burial plot",
+        "booking_why": "Burial (dafn) at a Muslim qabristan is customary and is ideally done as soon as possible — same day if it can be arranged. Contact the qabristan committee for the plot and timing.",
+        "booking_search": "muslim qabristan graveyard",
+        "ashes": False,
+        "urgency_note": "In most Muslim communities, burial is expected within 24 hours. If you can, start on this within the first few hours.",
+    },
+    "christian": {
+        "rites_title": "Contact the parish priest or pastor",
+        "rites_why": "The parish priest or pastor will help arrange the funeral mass or service. Christian funerals are usually held 2 to 5 days after death, giving family time to travel. Practices vary by denomination.",
+        "rites_search": "church parish",
+        "booking_title": "Book burial or cremation",
+        "booking_why": "Christian families choose burial or cremation based on family preference or denomination. If burial, contact a church-affiliated or municipal Christian cemetery for a plot. If cremation, book a municipal crematorium slot.",
+        "booking_search": "christian cemetery",
+        "ashes": False,
+        "urgency_note": None,
+    },
+    "sikh": {
+        "rites_title": "Contact the local Gurudwara",
+        "rites_why": "The Granthi from the local Gurudwara will conduct the Antam Sanskar. Many families also arrange an Akhand Path or Sukhmani Sahib path in the days after. Timing is flexible but cremation is usually within a few days.",
+        "rites_search": "gurudwara",
+        "booking_title": "Book a cremation slot",
+        "booking_why": "Cremation is customary in Sikh tradition. Book a slot at your nearest crematorium. Ashes are often later immersed in a river — that can happen when you are ready.",
+        "booking_search": "cremation ground",
+        "ashes": True,
+        "ashes_title": "Collect the ashes",
+        "ashes_why": "Ashes are usually available 24 to 48 hours after cremation. Many Sikh families later immerse them at a river or specific tirtha — this can happen when you are ready.",
+        "urgency_note": None,
+    },
+    "secular": {
+        "rites_title": "Choose a farewell for your family",
+        "rites_why": "You can hold a simple, non-religious farewell — a moment of silence, favourite music, or shared memories. There is no right or wrong way to do this.",
+        "rites_search": None,
+        "booking_title": "Book cremation or burial",
+        "booking_why": "Contact a municipal or private crematorium (usually cheaper via electric cremation) or a non-denominational cemetery for a burial plot.",
+        "booking_search": "crematorium",
+        "ashes": True,
+        "ashes_title": "Collect the ashes",
+        "ashes_why": "Ashes are usually available 24 to 48 hours after cremation. You can carry them home in a simple urn — the crematorium will provide one, or you can bring your own.",
+        "urgency_note": None,
+    },
+}
+
+
+def _rc(religion: Optional[str]) -> Dict[str, Any]:
+    key = (religion or "secular").lower()
+    return RELIGION_CONTENT.get(key, RELIGION_CONTENT["secular"])
+
+
+def build_tasks(place: str, religion: Optional[str], unexpected: bool = False) -> List[Dict[str, Any]]:
+    rc = _rc(religion)
+    hospital = place == "hospital"
+    home = place == "home"
 
     tasks: List[Dict[str, Any]] = []
 
-    # RIGHT NOW ------------------------------
-    if hospital_only:
+    # ---------------- RIGHT NOW ----------------
+    if unexpected:
         tasks.append({
-            "id": "hosp-declaration",
+            "id": "police-report",
             "phase": "right_now",
-            "title": "Get the medical certificate of death",
-            "short_label": "Medical death certificate",
+            "title": "Contact the police first",
+            "short_label": "Contact police",
+            "icon": "shield",
+            "why": "If the death was sudden, accidental, unwitnessed, or in any way unclear, Indian law requires police to be informed before the body is moved. A post-mortem may be required. This protects the family legally and ensures a valid death certificate later.",
+            "documents": [],
+            "phones": [POLICE, UNIFIED],
+            "maps_search": None,
+        })
+
+    if home:
+        tasks.append({
+            "id": "home-doctor",
+            "phase": "right_now",
+            "title": "Get a doctor to confirm the passing",
+            "short_label": "Doctor confirmation",
+            "icon": "user-check",
+            "why": "A registered doctor needs to examine and confirm the death, and note the time and cause. This letter is what the local registrar will need in place of a hospital MCCD. Most family doctors, nearby clinics, or 108 will visit.",
+            "documents": [],
+            "phones": [AMBULANCE_108, UNIFIED],
+            "maps_search": "clinic doctor",
+        })
+
+    if hospital:
+        tasks.append({
+            "id": "mccd",
+            "phase": "right_now",
+            "title": "Collect the Medical Certificate of Cause of Death (MCCD)",
+            "short_label": "MCCD from hospital",
             "icon": "file-text",
-            "why": "The hospital will issue a medical certificate of cause of death (Form 4). You will need this original document for all further steps — the death certificate, insurance, and bank claims.",
+            "why": "The hospital issues an MCCD (Form 4 / 4A). Ask for 3 to 4 original copies if possible. Without this, you cannot register the death or claim insurance. It comes from the hospital's medical officer, not the ward staff.",
             "documents": ["hospital"],
-            "contacts": ["hospital_admin"],
+            "phones": [],
+            "maps_search": None,
         })
         tasks.append({
             "id": "hosp-discharge",
             "phase": "right_now",
-            "title": "Complete hospital discharge",
+            "title": "Complete the hospital discharge",
             "short_label": "Hospital discharge",
             "icon": "clipboard",
-            "why": "Ask the ward nurse or admin desk for the discharge summary and bill settlement. Once done, the body can be moved to the mortuary or transported home.",
+            "why": "Settle the bill and ask the admin desk for the discharge summary. Once done, the body can be moved to the mortuary or transported home.",
             "documents": ["id_proof"],
-            "contacts": ["hospital_admin"],
-        })
-    else:
-        tasks.append({
-            "id": "home-doctor",
-            "phase": "right_now",
-            "title": "Call a doctor to confirm the passing",
-            "short_label": "Call doctor to confirm",
-            "icon": "user-check",
-            "why": "A registered doctor needs to examine and confirm the death. They will note the time and cause, which is needed for the death certificate. Most family doctors or local clinics offer home visits.",
-            "documents": [],
-            "contacts": ["ambulance"],
+            "phones": [],
+            "maps_search": None,
         })
 
     tasks.append({
         "id": "transport",
         "phase": "right_now",
-        "title": "Arrange transport (hearse or ambulance)",
+        "title": "Arrange transport (hearse van)",
         "short_label": "Arrange transport",
         "icon": "truck",
-        "why": "You will need a hearse van or funeral ambulance to move the body — from hospital to home, or home to the cremation/burial ground. Many services are available 24 hours.",
+        "why": "You will need a hearse or funeral van to move the body — from hospital to home, or home to the cremation / burial site. Many private services operate 24 hours; search near you.",
         "documents": [],
-        "contacts": ["ambulance", "mortuary"],
+        "phones": [UNIFIED, AMBULANCE_108],
+        "maps_search": "hearse funeral van service",
     })
 
     tasks.append({
@@ -148,89 +198,98 @@ def build_tasks(place: str, religion: Optional[str]) -> List[Dict[str, Any]]:
         "title": "Let close family know",
         "short_label": "Inform close family",
         "icon": "users",
-        "why": "You don't have to call everyone yourself. Use the family share sheet to send one calm, factual message to the family group — others can help spread the word.",
+        "why": "You do not have to call everyone yourself. Use the family share sheet to send one calm, factual message to a family group — others can help spread the word.",
         "documents": [],
-        "contacts": [],
+        "phones": [],
+        "maps_search": None,
     })
 
-    # TODAY ------------------------------
+    # ---------------- TODAY ----------------
     tasks.append({
         "id": "rites",
         "phase": "today",
-        "title": religion_rite["title"],
-        "short_label": religion_rite["title"],
+        "title": rc["rites_title"],
+        "short_label": rc["rites_title"],
         "icon": "heart",
-        "why": religion_rite["why"],
+        "why": rc["rites_why"],
         "documents": [],
-        "contacts": ["priest"],
+        "phones": [],
+        "maps_search": rc.get("rites_search"),
     })
 
     tasks.append({
-        "id": "cremation-booking",
+        "id": "booking",
         "phase": "today",
-        "title": "Book cremation or burial slot",
-        "short_label": "Book cremation slot",
+        "title": rc["booking_title"],
+        "short_label": rc["booking_title"],
         "icon": "calendar",
-        "why": "Contact the cremation ground or burial site to book a time slot. In many cities you can choose between traditional wood or electric cremation — electric is faster and lower cost.",
+        "why": rc["booking_why"],
         "documents": ["hospital", "id_proof"],
-        "contacts": ["cremation"],
+        "phones": [],
+        "maps_search": rc.get("booking_search"),
     })
 
-    # NEXT FEW DAYS ------------------------------
+    # ---------------- NEXT FEW DAYS ----------------
     tasks.append({
-        "id": "death-certificate",
+        "id": "register-death",
         "phase": "next_few_days",
-        "title": "Apply for the death certificate",
-        "short_label": "Death certificate",
-        "icon": "file-text",
-        "why": "This is the legal document needed for insurance claims, bank accounts, property, and pensions. Apply at your local municipal corporation office (or gram panchayat in rural areas). Registration is free within 21 days.",
+        "title": "Register the death (within 21 days)",
+        "short_label": "Register the death",
+        "icon": "edit-3",
+        "why": "Under the Registration of Births and Deaths Act, 1969, a death must be registered at the local Municipal Corporation, Municipality, or Gram Panchayat office covering the area where the death occurred. Free within 21 days. After 21 days there is a small delay fee and an affidavit; after 1 year, a magistrate's order is needed. You can also apply online at crsorgi.gov.in, or your state portal.",
         "documents": ["hospital", "aadhaar", "id_proof"],
-        "contacts": ["certificate_office"],
+        "phones": [],
+        "maps_search": "municipal corporation death registration office",
     })
 
-    tasks.append({
-        "id": "ashes",
-        "phase": "next_few_days",
-        "title": "Collect ashes or urn",
-        "short_label": "Collect ashes",
-        "icon": "package",
-        "why": "Ashes are usually available 24 to 48 hours after cremation. You can carry them home in a simple urn — the cremation ground will provide one, or you can bring your own.",
-        "documents": [],
-        "contacts": ["cremation"],
-    })
+    if rc["ashes"]:
+        tasks.append({
+            "id": "ashes",
+            "phase": "next_few_days",
+            "title": rc.get("ashes_title", "Collect the ashes"),
+            "short_label": rc.get("ashes_title", "Collect the ashes"),
+            "icon": "package",
+            "why": rc.get("ashes_why", "Ashes are usually available 24 to 48 hours after cremation."),
+            "documents": [],
+            "phones": [],
+            "maps_search": rc.get("booking_search"),
+        })
 
-    # NEXT FEW WEEKS ------------------------------
+    # ---------------- NEXT FEW WEEKS ----------------
     tasks.append({
         "id": "certificate-collect",
         "phase": "next_few_weeks",
-        "title": "Collect the death certificate",
+        "title": "Collect the death certificate (5 to 8 originals)",
         "short_label": "Collect certificate",
         "icon": "file-text",
-        "why": "The certificate is usually ready in 7 to 21 days. Collect a few original copies — you will need one for each bank, insurance company, and government office.",
+        "why": "The certificate is usually ready 7 to 15 days after registration (some cities offer a 24-hour tatkaal service for a fee). Ask for 5 to 8 original copies — banks, insurers, pension office, property registrar, utilities, and employer will each want an original or a notarised copy. Reprints later cost time and money.",
         "documents": [],
-        "contacts": ["certificate_office"],
+        "phones": [],
+        "maps_search": "municipal corporation death registration office",
     })
 
     tasks.append({
         "id": "insurance",
         "phase": "next_few_weeks",
-        "title": "Start the insurance claim",
+        "title": "Start the insurance claim with the insurer directly",
         "short_label": "Insurance claim",
         "icon": "shield",
-        "why": "Contact each insurance company (life, health, motor). You will need the death certificate, policy documents, and a claim form. Most companies allow online claim submission.",
+        "why": "You file the claim with the actual insurance company, not IRDAI. Check the policy document, the deceased's bank passbook (for premium auto-debits), or ask their employer if it was a group policy. Most insurers accept online submission. Only contact IRDAI (155255) if the insurer is unresponsive or unfair — that is a grievance line, not a claims line.",
         "documents": ["insurance", "hospital"],
-        "contacts": ["insurance"],
+        "phones": [LIC_HELPLINE, IRDAI_GRIEVANCE],
+        "maps_search": None,
     })
 
     tasks.append({
         "id": "bank",
         "phase": "next_few_weeks",
-        "title": "Notify banks and update accounts",
+        "title": "Notify the banks",
         "short_label": "Notify banks",
         "icon": "credit-card",
-        "why": "Inform banks to freeze accounts, transfer joint holdings, and claim nominee funds. Carry the death certificate, the deceased's ID, and your ID.",
+        "why": "What you need depends on the account: for a joint account, ask for removal of the deceased's name; for a sole account with a nominee, the nominee can claim; without a nominee, the bank may ask for a legal heir or succession certificate, especially for larger balances. Carry the death certificate, passbook, deceased's ID, and your ID.",
         "documents": ["id_proof", "aadhaar"],
-        "contacts": ["insurance"],
+        "phones": [],
+        "maps_search": None,
     })
 
     tasks.append({
@@ -239,47 +298,84 @@ def build_tasks(place: str, religion: Optional[str]) -> List[Dict[str, Any]]:
         "title": "Update utilities and subscriptions",
         "short_label": "Utilities & subscriptions",
         "icon": "zap",
-        "why": "Transfer or close electricity, gas, phone, and internet accounts. Cancel any monthly subscriptions. You can do most of this online now.",
+        "why": "Transfer or close electricity, gas / LPG, phone, mobile number, DTH / broadband, and any monthly subscriptions. Most of this can be done online with a copy of the death certificate.",
         "documents": ["id_proof"],
-        "contacts": [],
+        "phones": [],
+        "maps_search": None,
     })
+
+    tasks.append({
+        "id": "legal-heir",
+        "phase": "next_few_weeks",
+        "title": "Legal heir / succession certificate (only if needed)",
+        "short_label": "Legal heir certificate",
+        "icon": "file-plus",
+        "why": "If there was no will or nominee, and there are significant assets — a house, large bank balances, a vehicle — you may need a legal heir certificate (from the Tahsildar / SDM) or a succession certificate (from the civil court). This can take a few weeks and needs the death certificate, family details, and address proofs.",
+        "documents": ["aadhaar", "id_proof"],
+        "phones": [],
+        "maps_search": "tahsildar office",
+    })
+
+    # ---------------- IN THE COMING MONTHS ----------------
+    tasks.append({
+        "id": "other-admin",
+        "phase": "coming_months",
+        "title": "Other admin — PAN, EPFO, ration card, vehicle",
+        "short_label": "PAN, EPFO, vehicle etc.",
+        "icon": "list",
+        "why": "Things families sometimes forget: PAN card surrender (to the income tax office), EPFO / pension nomination transfer (via the employer or EPFO portal), ration card update (via the state ration office), and vehicle RC transfer (via the RTO). Not urgent, but easier to sort within a few months.",
+        "documents": ["aadhaar", "id_proof"],
+        "phones": [],
+        "maps_search": None,
+    })
+
+    tasks.append({
+        "id": "final-tax-return",
+        "phase": "coming_months",
+        "title": "File the final income tax return, if applicable",
+        "short_label": "Final tax return",
+        "icon": "file",
+        "why": "The legal representative (usually the nominee or a legal heir) can file a final income tax return for the deceased on the income tax portal. This is done for the financial year of death. A CA can do this for a modest fee.",
+        "documents": [],
+        "phones": [],
+        "maps_search": None,
+    })
+
+    # Attach religion urgency note to the first Right Now task, if any.
+    urgency = rc.get("urgency_note")
+    if urgency:
+        for t in tasks:
+            if t["phase"] == "right_now":
+                t["urgency_note"] = urgency
+                break
 
     return tasks
 
 
-CONTACT_TEMPLATES: List[Dict[str, Any]] = [
-    {"id": "ambulance", "name": "Ambulance / Doctor on call", "role": "Emergency medical", "category": "ambulance", "phone": "102", "day_one_only": False},
-    {"id": "mortuary", "name": "Mortuary transport", "role": "Hearse / body transport", "category": "transport", "phone": "1099", "day_one_only": False},
-    {"id": "cremation", "name": "Cremation ground office", "role": "Booking & timings", "category": "cremation", "phone": "1912", "day_one_only": False},
-    {"id": "priest_hindu", "name": "Pandit (Hindu rites)", "role": "Last rites & mantras", "category": "priest", "phone": "1800111222", "day_one_only": False},
-    {"id": "priest_muslim", "name": "Imam (Muslim rites)", "role": "Ghusl & Janazah", "category": "priest", "phone": "1800111333", "day_one_only": False},
-    {"id": "priest_christian", "name": "Parish priest", "role": "Funeral service", "category": "priest", "phone": "1800111444", "day_one_only": False},
-    {"id": "priest_sikh", "name": "Granthi (Sikh rites)", "role": "Antim Ardas", "category": "priest", "phone": "1800111555", "day_one_only": False},
-    {"id": "certificate_office", "name": "Municipal / Panchayat office", "role": "Death certificate", "category": "certificate", "phone": "1077", "day_one_only": False},
-    {"id": "hospital_admin", "name": "Hospital admin desk", "role": "Medical certificate", "category": "hospital", "phone": "104", "day_one_only": False},
-    {"id": "insurance", "name": "Insurance helpline (IRDAI)", "role": "Claims guidance", "category": "insurance", "phone": "18004254732", "day_one_only": True},
-]
-
-
-def contacts_for(religion: Optional[str], day: int = 0) -> List[Dict[str, Any]]:
-    r = (religion or "secular").lower()
-    priest_map = {
-        "hindu": "priest_hindu",
-        "muslim": "priest_muslim",
-        "christian": "priest_christian",
-        "sikh": "priest_sikh",
-    }
-    result = []
-    for c in CONTACT_TEMPLATES:
-        if c["category"] == "priest":
-            # only include the priest for chosen religion (or none for secular)
-            if r in priest_map and c["id"] == priest_map[r]:
-                result.append(c)
-            continue
-        if c.get("day_one_only") and day < 1:
-            continue
-        result.append(c)
-    return result
+# ---------------- Contacts Hub content ----------------
+# National verified numbers only + local searches (maps).
+def contacts_payload(religion: Optional[str]):
+    rc = _rc(religion)
+    national = [
+        {"id": "unified", "name": "Unified emergency (police / fire / ambulance)", "phone": "112", "note": "Works even without SIM or network"},
+        {"id": "ambulance-108", "name": "Ambulance", "phone": "108", "note": "State ambulance service"},
+        {"id": "ambulance-102", "name": "Ambulance (maternal / general)", "phone": "102", "note": "Available in many states"},
+        {"id": "police", "name": "Police", "phone": "100", "note": None},
+        {"id": "fire", "name": "Fire", "phone": "101", "note": None},
+        {"id": "senior", "name": "Senior citizens helpline", "phone": "14567", "note": "If the surviving spouse is elderly and alone"},
+        {"id": "women", "name": "Women's helpline", "phone": "1091", "note": None},
+        {"id": "irdai", "name": "IRDAI grievance (Bima Bharosa)", "phone": "155255", "note": "Only if the insurer is unresponsive"},
+    ]
+    local_searches = [
+        {"id": "hearse", "label": "Hearse / funeral van near you", "query": "hearse funeral van service"},
+        {"id": "municipal", "label": "Municipal death registration office", "query": "municipal corporation death registration office"},
+        {"id": "hospital", "label": "Hospital near you", "query": "hospital"},
+    ]
+    if rc.get("rites_search"):
+        local_searches.append({"id": "rites", "label": rc["rites_title"], "query": rc["rites_search"]})
+    if rc.get("booking_search"):
+        local_searches.append({"id": "booking", "label": rc["booking_title"], "query": rc["booking_search"]})
+    return {"national": national, "local_searches": local_searches}
 
 
 # ---------------- Routes ----------------
@@ -290,19 +386,17 @@ async def root():
 
 @api_router.post("/checklist")
 async def get_checklist(req: ChecklistRequest):
-    tasks = build_tasks(req.place_of_death, req.religion)
+    tasks = build_tasks(req.place_of_death, req.religion, req.unexpected)
     return {"tasks": tasks}
 
 
 @api_router.get("/contacts")
-async def get_contacts(religion: Optional[str] = None, day: int = 0):
-    return {"contacts": contacts_for(religion, day)}
+async def get_contacts(religion: Optional[str] = None):
+    return contacts_payload(religion)
 
 
-# ------ Mock OTP ------
 @api_router.post("/otp/send")
 async def send_otp(req: OTPRequest):
-    # Mock — always "sent". Fixed code 123456.
     await db.otp_log.insert_one({
         "id": str(uuid.uuid4()),
         "phone": req.phone,
@@ -319,7 +413,6 @@ async def verify_otp(req: OTPVerify):
     raise HTTPException(status_code=400, detail="Invalid code")
 
 
-# ------ Vault ------
 @api_router.post("/vault/upload")
 async def vault_upload(req: VaultUpload):
     doc_id = str(uuid.uuid4())
@@ -348,7 +441,6 @@ async def vault_delete(doc_id: str):
     return {"success": True}
 
 
-# ------ Share message ------
 class ShareRequest(BaseModel):
     name: Optional[str] = None
     time: Optional[str] = None
@@ -360,9 +452,9 @@ class ShareRequest(BaseModel):
 async def share_message(req: ShareRequest):
     name = req.name or "our family"
     time = req.time or "soon"
-    place = req.place or "the local cremation ground"
+    place = req.place or "the local site"
     templates = {
-        "en": f"Update from {name}: The cremation is arranged for {time} at {place}. The death certificate is in process. We will share more details soon. Thank you for your love and support.",
+        "en": f"Update from {name}: The service is arranged for {time} at {place}. The death certificate is in process. We will share more details soon. Thank you for your love and support.",
         "hi": f"{name} की ओर से सूचना: अंतिम संस्कार {time} पर {place} में होगा। मृत्यु प्रमाण पत्र की प्रक्रिया जारी है। जल्द ही और जानकारी साझा करेंगे। आपके प्रेम और समर्थन के लिए धन्यवाद।",
         "ta": f"{name} இருந்து செய்தி: இறுதிச் சடங்கு {time} மணிக்கு {place} இல் நடக்கும். மரணச் சான்றிதழ் செயல்பாட்டில் உள்ளது. விரைவில் மேலும் விவரங்களைப் பகிர்வோம். உங்கள் அன்பிற்கும் ஆதரவிற்கும் நன்றி.",
     }

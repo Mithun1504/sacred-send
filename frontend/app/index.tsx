@@ -33,6 +33,9 @@ export default function Landing() {
         <Text style={styles.subtext} testID="landing-subtext">
           {t('landingSub')}
         </Text>
+        <Text style={styles.privacyLine} testID="landing-privacy">
+          {t('privacyLine')}
+        </Text>
       </View>
 
       <View style={styles.bottomBlock}>
@@ -99,6 +102,12 @@ const styles = StyleSheet.create({
     fontSize: type.lg,
     lineHeight: 28,
     color: colors.onSurfaceSecondary,
+    textAlign: 'center',
+  },
+  privacyLine: {
+    marginTop: spacing.md,
+    fontSize: type.sm,
+    color: colors.onSurfaceTertiary,
     textAlign: 'center',
   },
   bottomBlock: {

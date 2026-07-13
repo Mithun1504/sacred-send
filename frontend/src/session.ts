@@ -9,9 +9,11 @@ export interface Session {
   location: string;
   place_of_death: Place;
   religion: Religion;
+  unexpected: boolean;
   createdAt: string;
   doneTaskIds: string[];
   inProgressTaskIds: string[];
+  skippedTaskIds: string[];
   vaultSessionId?: string;
   remindersEnabled?: boolean;
   familyName?: string;
@@ -49,9 +51,11 @@ export function emptySession(): Session {
     location: '',
     place_of_death: 'hospital',
     religion: null,
+    unexpected: false,
     createdAt: new Date().toISOString(),
     doneTaskIds: [],
     inProgressTaskIds: [],
+    skippedTaskIds: [],
   };
 }
 

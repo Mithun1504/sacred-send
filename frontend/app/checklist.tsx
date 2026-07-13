@@ -13,7 +13,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { colors, spacing, radius, type, shadow } from '@/src/theme';
 import { useI18n } from '@/src/i18n';
-import { loadSession, daysSinceStart, type Session } from '@/src/session';
+import { loadSession, type Session } from '@/src/session';
 import { api, type Task } from '@/src/api';
 
 const PHASES: { key: Task['phase']; labelKey: string; defaultOpen: boolean }[] = [
@@ -21,6 +21,7 @@ const PHASES: { key: Task['phase']; labelKey: string; defaultOpen: boolean }[] =
   { key: 'today', labelKey: 'phaseToday', defaultOpen: false },
   { key: 'next_few_days', labelKey: 'phaseNextFewDays', defaultOpen: false },
   { key: 'next_few_weeks', labelKey: 'phaseNextFewWeeks', defaultOpen: false },
+  { key: 'coming_months', labelKey: 'phaseComingMonths', defaultOpen: false },
 ];
 
 export default function Checklist() {
@@ -33,6 +34,7 @@ export default function Checklist() {
     today: false,
     next_few_days: false,
     next_few_weeks: false,
+    coming_months: false,
   });
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +46,7 @@ export default function Checklist() {
     }
     setSession(s);
     try {
-      const res = await api.getChecklist(s.place_of_death, s.religion, s.location);
+      const res = await api.getChecklist(s.place_of_death, s.religion, s.location, s.unexpected);
       setTasks(res.tasks);
     } catch (e) {
       console.warn('checklist load failed', e);
@@ -61,17 +63,26 @@ export default function Checklist() {
   const toggle = (key: string) => setOpen((o) => ({ ...o, [key]: !o[key] }));
 
   const doneCount = session ? tasks.filter((t) => session.doneTaskIds.includes(t.id)).length : 0;
+  const skippedCount = session
+    ? tasks.filter((t) => session.skippedTaskIds.includes(t.id)).length
+    : 0;
   const totalCount = tasks.length;
-  const daysIn = session ? daysSinceStart(session) : 0;
 
-  const visiblePhases = PHASES.filter((p) => p.key !== 'next_few_weeks' || daysIn >= 1 || totalCount > 0);
+  const visiblePhases = PHASES;
 
-  const grouped: Record<string, Task[]> = { right_now: [], today: [], next_few_days: [], next_few_weeks: [] };
+  const grouped: Record<string, Task[]> = {
+    right_now: [],
+    today: [],
+    next_few_days: [],
+    next_few_weeks: [],
+    coming_months: [],
+  };
   tasks.forEach((tk) => grouped[tk.phase].push(tk));
 
   const status = (task: Task) => {
     if (!session) return t('taskNotStarted');
     if (session.doneTaskIds.includes(task.id)) return t('taskDone');
+    if (session.skippedTaskIds.includes(task.id)) return t('skipTask');
     if (session.inProgressTaskIds.includes(task.id)) return t('taskInProgress');
     return t('taskNotStarted');
   };
@@ -83,9 +94,11 @@ export default function Checklist() {
           <Text style={styles.title} testID="checklist-title">
             {t('checklistTitle')}
           </Text>
-          {!loading && (
+          {!loading && totalCount > 0 && (
             <Text style={styles.progressText} testID="checklist-progress">
-              {doneCount} / {totalCount} {t('progressSuffix')}
+              {doneCount === 0 && skippedCount === 0
+                ? `${totalCount} things to look at, a few at a time`
+                : `${doneCount} done · ${skippedCount} skipped · ${totalCount - doneCount - skippedCount} left`}
             </Text>
           )}
         </View>
@@ -104,7 +117,7 @@ export default function Checklist() {
           <View
             style={[
               styles.progressBarFill,
-              { width: totalCount ? `${(doneCount / totalCount) * 100}%` : '0%' },
+              { width: totalCount ? `${((doneCount + skippedCount) / totalCount) * 100}%` : '0%' },
             ]}
           />
         </View>
@@ -151,6 +164,7 @@ export default function Checklist() {
                   <View style={styles.taskList}>
                     {items.map((task) => {
                       const isDone = session?.doneTaskIds.includes(task.id);
+                      const isSkipped = session?.skippedTaskIds.includes(task.id);
                       return (
                         <Pressable
                           key={task.id}
@@ -159,6 +173,7 @@ export default function Checklist() {
                             styles.taskRow,
                             pressed && { opacity: 0.9 },
                             isDone && styles.taskRowDone,
+                            isSkipped && styles.taskRowSkipped,
                           ]}
                           testID={`task-row-${task.id}`}
                         >
@@ -171,7 +186,11 @@ export default function Checklist() {
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text
-                              style={[styles.taskLabel, isDone && styles.taskLabelDone]}
+                              style={[
+                                styles.taskLabel,
+                                isDone && styles.taskLabelDone,
+                                isSkipped && styles.taskLabelSkipped,
+                              ]}
                               numberOfLines={2}
                             >
                               {task.short_label}
@@ -180,6 +199,8 @@ export default function Checklist() {
                           </View>
                           {isDone ? (
                             <Feather name="check-circle" size={22} color={colors.brand} />
+                          ) : isSkipped ? (
+                            <Feather name="minus-circle" size={22} color={colors.onSurfaceTertiary} />
                           ) : (
                             <Feather name="chevron-right" size={22} color={colors.borderStrong} />
                           )}
@@ -302,6 +323,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandTertiary,
     borderColor: colors.brandSecondary,
   },
+  taskRowSkipped: {
+    opacity: 0.65,
+  },
   taskIcon: {
     width: 40,
     height: 40,
@@ -319,6 +343,10 @@ const styles = StyleSheet.create({
   },
   taskLabelDone: {
     color: colors.onBrandTertiary,
+  },
+  taskLabelSkipped: {
+    textDecorationLine: 'line-through',
+    color: colors.onSurfaceTertiary,
   },
   taskStatus: {
     fontSize: type.sm,
