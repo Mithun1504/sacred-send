@@ -10,15 +10,26 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.sacredsend.n13r3m"
+      "bundleIdentifier": "com.emergent.sacredsend.n13r3m",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Show nearby services close to you",
+        "NSCameraUsageDescription": "Save photos of important documents",
+        "NSPhotoLibraryUsageDescription": "Save photos of important documents"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#FAF8F5"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.sacredsend.n13r3m"
+      "package": "com.emergent.sacredsend.n13r3m",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
