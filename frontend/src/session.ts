@@ -25,7 +25,13 @@ export async function loadSession(): Promise<Session | null> {
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw);
+    const s = JSON.parse(raw);
+    if (s) {
+      if (!s.doneTaskIds) s.doneTaskIds = [];
+      if (!s.inProgressTaskIds) s.inProgressTaskIds = [];
+      if (!s.skippedTaskIds) s.skippedTaskIds = [];
+    }
+    return s;
   } catch {
     return null;
   }

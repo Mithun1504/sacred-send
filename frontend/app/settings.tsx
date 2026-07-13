@@ -48,7 +48,7 @@ export default function Settings() {
         content: {
           title: 'A gentle reminder',
           body: 'When you have a moment, check the "Today" list.',
-          sound: null,
+          sound: undefined,
         },
         trigger: { seconds: 60 * 60 * 24, repeats: false } as any,
       });

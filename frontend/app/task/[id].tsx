@@ -46,13 +46,13 @@ export default function TaskDetail() {
     load();
   }, [load]);
 
-  const isDone = session && task ? session.doneTaskIds.includes(task.id) : false;
-  const isSkipped = session && task ? session.skippedTaskIds.includes(task.id) : false;
+  const isDone = session && task ? (session.doneTaskIds || []).includes(task.id) : false;
+  const isSkipped = session && task ? (session.skippedTaskIds || []).includes(task.id) : false;
 
   const setState = async (target: 'done' | 'skipped' | 'reset') => {
     if (!task || !session) return;
-    const done = new Set(session.doneTaskIds);
-    const skipped = new Set(session.skippedTaskIds);
+    const done = new Set(session.doneTaskIds || []);
+    const skipped = new Set(session.skippedTaskIds || []);
     done.delete(task.id);
     skipped.delete(task.id);
     if (target === 'done') {

@@ -10,6 +10,17 @@ import { colors } from "@/src/theme";
 
 LogBox.ignoreAllLogs(true);
 
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (
+    typeof args[0] === 'string' &&
+    args[0].includes('expo-notifications: Android Push notifications')
+  ) {
+    return;
+  }
+  originalConsoleError(...args);
+};
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {

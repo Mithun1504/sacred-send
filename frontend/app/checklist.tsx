@@ -62,9 +62,9 @@ export default function Checklist() {
 
   const toggle = (key: string) => setOpen((o) => ({ ...o, [key]: !o[key] }));
 
-  const doneCount = session ? tasks.filter((t) => session.doneTaskIds.includes(t.id)).length : 0;
+  const doneCount = session ? tasks.filter((t) => (session.doneTaskIds || []).includes(t.id)).length : 0;
   const skippedCount = session
-    ? tasks.filter((t) => session.skippedTaskIds.includes(t.id)).length
+    ? tasks.filter((t) => (session.skippedTaskIds || []).includes(t.id)).length
     : 0;
   const totalCount = tasks.length;
 
@@ -81,9 +81,9 @@ export default function Checklist() {
 
   const status = (task: Task) => {
     if (!session) return t('taskNotStarted');
-    if (session.doneTaskIds.includes(task.id)) return t('taskDone');
-    if (session.skippedTaskIds.includes(task.id)) return t('skipTask');
-    if (session.inProgressTaskIds.includes(task.id)) return t('taskInProgress');
+    if ((session.doneTaskIds || []).includes(task.id)) return t('taskDone');
+    if ((session.skippedTaskIds || []).includes(task.id)) return t('skipTask');
+    if ((session.inProgressTaskIds || []).includes(task.id)) return t('taskInProgress');
     return t('taskNotStarted');
   };
 
@@ -138,7 +138,7 @@ export default function Checklist() {
             if (!items.length) return null;
             const isOpen = open[phase.key];
             const phaseDone = session
-              ? items.filter((tk) => session.doneTaskIds.includes(tk.id)).length
+              ? items.filter((tk) => (session.doneTaskIds || []).includes(tk.id)).length
               : 0;
             return (
               <View key={phase.key} style={styles.section} testID={`section-${phase.key}`}>
@@ -163,8 +163,8 @@ export default function Checklist() {
                 {isOpen && (
                   <View style={styles.taskList}>
                     {items.map((task) => {
-                      const isDone = session?.doneTaskIds.includes(task.id);
-                      const isSkipped = session?.skippedTaskIds.includes(task.id);
+                      const isDone = (session?.doneTaskIds || []).includes(task.id);
+                      const isSkipped = (session?.skippedTaskIds || []).includes(task.id);
                       return (
                         <Pressable
                           key={task.id}
