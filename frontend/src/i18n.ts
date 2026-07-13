@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useCallback } from 'react';
 
-export type Lang = 'en' | 'hi' | 'ta';
+export type Lang = 'en' | 'hi' | 'ta' | 'kn' | 'te';
 
 type Dict = Record<string, string>;
 
@@ -314,7 +314,213 @@ const ta: Dict = {
   remindersOn: 'நினைவூட்டல்கள் இயக்கத்தில்',
 };
 
-const DICTS: Record<Lang, Dict> = { en, hi, ta };
+const kn: Dict = {
+  appName: 'ಒಂದು ಮೃದು ಮಾರ್ಗದರ್ಶಿ',
+  landingSub: 'ಒಂದೊಂದೇ ಹೆಜ್ಜೆ, ನಿಮ್ಮ ಜೊತೆಗೆ ನಡೆಯುತ್ತೇವೆ.',
+  startButton: 'ಪ್ರಾರಂಭಿಸಿ — ನನಗೆ ಈಗಲೇ ಸಹಾಯ ಬೇಕು',
+  continueLink: 'ನಾನು ಬಿಟ್ಟಲ್ಲಿಂದ ಮುಂದುವರಿಸಿ',
+  next: 'ಮುಂದೆ',
+  skip: 'ಬಿಟ್ಟುಬಿಡಿ',
+  back: 'ಹಿಂದೆ',
+  step: 'ಹಂತ',
+
+  locationTitle: 'ನೀವು ಎಲ್ಲಿದ್ದೀರಿ?',
+  locationHelp: 'ಇದು ಹತ್ತಿರದ ಸೇವೆಗಳನ್ನು ತೋರಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ.',
+  locationPlaceholder: 'ನಗರ ಅಥವಾ ಪ್ರದೇಶ',
+  useMyLocation: 'ನನ್ನ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಬಳಸಿ',
+  detecting: 'ಪತ್ತೆಹಚ್ಚಲಾಗುತ್ತಿದೆ…',
+
+  placeTitle: 'ಎಲ್ಲಿ ನಿಧನರಾದರು?',
+  placeHospital: 'ಆಸ್ಪತ್ರೆಯಲ್ಲಿ',
+  placeHome: 'ಮನೆಯಲ್ಲಿ',
+  placeOther: 'ಬೇರೆ ಎಲ್ಲಿಯಾದರೂ',
+
+  religionTitle: 'ಯಾವುದಾದರೂ ಸಂಪ್ರದಾಯವಿದೆಯೇ?',
+  religionHelp: 'ಇದು ಸಂಪೂರ್ಣ ನಿಮ್ಮ ಆಯ್ಕೆ. ಇದು ಕೇವಲ ಮಾರ್ಗದರ್ಶನವನ್ನು ಸೂಕ್ತಗೊಳಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ.',
+  hindu: 'ಹಿಂದೂ',
+  muslim: 'ಮುಸ್ಲಿಂ',
+  christian: 'ಕ್ರಿಶ್ಚಿಯನ್',
+  sikh: 'ಸಿಖ್',
+  secular: 'ಯಾವುದೇ ಸಂಪ್ರದಾಯವಿಲ್ಲ',
+
+  checklistTitle: 'ಇದನ್ನು ಮಾಡಬೇಕಾಗಿದೆ',
+  progressSuffix: 'ಹಂತಗಳು ಮುಗಿದಿವೆ',
+  phaseRightNow: 'ಈಗಲೇ',
+  phaseToday: 'ಇಂದು',
+  phaseNextFewDays: 'ಮುಂದಿನ ಕೆಲವು ದಿನಗಳಲ್ಲಿ',
+  phaseNextFewWeeks: 'ಕೆಲವು ವಾರಗಳಲ್ಲಿ',
+  taskNotStarted: 'ಪ್ರಾರಂಭವಾಗಿಲ್ಲ',
+  taskInProgress: 'ನಡೆಯುತ್ತಿದೆ',
+  taskDone: 'ಮುಗಿದಿದೆ',
+  callForHelp: 'ಸಹಾಯಕ್ಕಾಗಿ ಕರೆ ಮಾಡಿ',
+
+  whyThisIsNeeded: 'ಇದು ಏಕೆ ಬೇಕು',
+  documentsNeeded: 'ಬೇಕಾದ ದಾಖಲೆಗಳು',
+  addLater: 'ನಂತರ ಸೇರಿಸಿ',
+  attached: 'ಲಗತ್ತಿಸಲಾಗಿದೆ',
+  callNow: 'ಈಗ ಕರೆ ಮಾಡಿ',
+  markDone: 'ಮುಗಿದಿದೆ ಎಂದು ಗುರುತಿಸಿ',
+  markUndone: 'ಇನ್ನೂ ಮುಗಿದಿಲ್ಲ',
+  skipTask: 'ನಮಗೆ ಅನ್ವಯಿಸುವುದಿಲ್ಲ',
+  undoSkip: 'ಮರಳಿ ತನ್ನಿ',
+  taskDoneCaption: 'ಮುಗಿಯಿತು. ಒಂದು ಚಿಂತೆ ಕಡಿಮೆ.',
+  taskSkippedCaption: 'ಸರಿ, ಬಿಟ್ಟುಬಿಡಲಾಗಿದೆ.',
+  openInMaps: 'ಹತ್ತಿರದಲ್ಲಿ ಹುಡುಕಿ',
+  urgencyNote: 'ಗಮನಿಸಿ',
+
+  unexpectedTitle: 'ಇದು ಅನಿರೀಕ್ಷಿತವಾಗಿತ್ತೇ ಅಥವಾ ಅಪಘಾತವಾಗಿತ್ತೇ?',
+  unexpectedHelp: 'ಹೌದು ಎಂದಾದರೆ, ನಾವು ಪೊಲೀಸ್ ವರದಿಯ ಹಂತವನ್ನು ಸೇರಿಸುತ್ತೇವೆ. ಖಚಿತವಿಲ್ಲದಿದ್ದರೆ ಬಿಟ್ಟುಬಿಡಿ.',
+  yes: 'ಹೌದು',
+  no: 'ಇಲ್ಲ',
+  privacyLine: 'ನೋಂದಣಿ ಇಲ್ಲ. ಏನೂ ಈ ಸಾಧನದಿಂದ ಹೊರಗೆ ಹೋಗುವುದಿಲ್ಲ.',
+  phaseComingMonths: 'ಮುಂಬರುವ ತಿಂಗಳುಗಳಲ್ಲಿ',
+  localSearchesTitle: 'ಹತ್ತಿರದಲ್ಲಿ ಹುಡುಕಿ',
+  nationalContactsTitle: 'ಪರಿಶೀಲಿಸಿದ ಸಹಾಯವಾಣಿಗಳು',
+
+  contactsTitle: 'ನೀವು ಕರೆ ಮಾಡಬಹುದಾದವರು',
+  call: 'ಕರೆ',
+
+  vaultTitle: 'ನಿಮ್ಮ ದಾಖಲೆಗಳು',
+  vaultHelp: 'ನೀವು ಮಾತ್ರ ಇವುಗಳನ್ನು ನೋಡಬಹುದು.',
+  enterPhone: 'ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ',
+  sendOtp: 'ಕೋಡ್ ಕಳುಹಿಸಿ',
+  enterOtp: '6-ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ',
+  otpHint: 'ಪರೀಕ್ಷೆಗಾಗಿ 123456 ಬಳಸಿ.',
+  verify: 'ದೃಢೀಕರಿಸಿ',
+  addDocument: 'ದಾಖಲೆ ಸೇರಿಸಿ',
+  takePhoto: 'ಫೋಟೋ ತೆಗೆಯಿರಿ',
+  chooseFromLibrary: 'ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ',
+  docAadhaar: 'ಆಧಾರ್',
+  docId: 'ಗುರುತಿನ ಚೀಟಿ',
+  docInsurance: 'ವಿಮಾ ದಾಖಲೆ',
+  docHospital: 'ಆಸ್ಪತ್ರೆ ದಾಖಲೆಗಳು',
+  remove: 'ತೆಗೆದುಹಾಕಿ',
+
+  shareTitle: 'ಕುಟುಂಬಕ್ಕೆ ಸಂದೇಶ',
+  shareHelp: 'ನಾವು ಶಾಂತವಾದ ಸಂದೇಶವನ್ನು ಸಿದ್ಧಪಡಿಸಿದ್ದೇವೆ. ಬೇಕಾದಂತೆ ಬದಲಾಯಿಸಿ.',
+  timeLabel: 'ಅಂತಿಮ ಸಂಸ್ಕಾರದ ಸಮಯ',
+  placeLabel: 'ಅಂತಿಮ ಸಂಸ್ಕಾರದ ಸ್ಥಳ',
+  nameLabel: 'ಕಳುಹಿಸುವವರು (ಕುಟುಂಬದ ಹೆಸರು)',
+  openWhatsApp: 'ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ',
+
+  settingsTitle: 'ಸೆಟ್ಟಿಂಗ್ಸ್',
+  changeLanguage: 'ಭಾಷೆ',
+  changeLocation: 'ಸ್ಥಳ ಬದಲಾಯಿಸಿ',
+  startOver: 'ಹೊಸ ಪಟ್ಟಿ ಪ್ರಾರಂಭಿಸಿ',
+  clearAll: 'ಈ ಸಾಧನದಿಂದ ಎಲ್ಲವನ್ನೂ ಅಳಿಸಿ',
+  clearConfirm: 'ಎಲ್ಲಾ ಉಳಿಸಿದ ಮಾಹಿತಿಯನ್ನು ತೆಗೆದುಹಾಕಲಾಗುತ್ತದೆ. ಖಚಿತವೇ?',
+  cancel: 'ರದ್ದುಗೊಳಿಸಿ',
+  yesClear: 'ಹೌದು, ಎಲ್ಲವನ್ನೂ ಅಳಿಸಿ',
+  reminders: 'ಜ್ಞಾಪನೆಗಳು',
+  remindersHelp: 'ಶಬ್ದವಿಲ್ಲದ ಶಾಂತ ಸೂಚನೆಗಳು.',
+  enableReminders: 'ಜ್ಞಾಪನೆಗಳನ್ನು ಆನ್ ಮಾಡಿ',
+  remindersOn: 'ಜ್ಞಾಪನೆಗಳು ಆನ್ ಆಗಿವೆ',
+};
+
+const te: Dict = {
+  appName: 'ఒక సున్నితమైన మార్గదర్శి',
+  landingSub: 'ఒక్కో అడుగుగా, మేము మీతో పాటు నడుస్తాము.',
+  startButton: 'ప్రారంభించండి — నాకు ఇప్పుడే సహాయం కావాలి',
+  continueLink: 'ఆపిన చోటు నుండి కొనసాగించండి',
+  next: 'తర్వాత',
+  skip: 'దాటవేయండి',
+  back: 'వెనుకకు',
+  step: 'దశ',
+
+  locationTitle: 'మీరు ఎక్కడ ఉన్నారు?',
+  locationHelp: 'దగ్గరలోని సేవలను చూపడానికి ఇది సహాయపడుతుంది.',
+  locationPlaceholder: 'నగరం లేదా ప్రాంతం',
+  useMyLocation: 'నా ప్రస్తుత స్థానాన్ని ఉపయోగించండి',
+  detecting: 'కనుగొంటున్నాము…',
+
+  placeTitle: 'ఎక్కడ మరణించారు?',
+  placeHospital: 'ఆసుపత్రిలో',
+  placeHome: 'ఇంట్లో',
+  placeOther: 'మరెక్కడైనా',
+
+  religionTitle: 'ఏదైనా సంప్రదాయం ఉందా?',
+  religionHelp: 'ఇది పూర్తిగా మీ ఇష్టం. మార్గదర్శనాన్ని అనుకూలంగా చేయడానికి మాత్రమే.',
+  hindu: 'హిందూ',
+  muslim: 'ముస్లిం',
+  christian: 'క్రైస్తవ',
+  sikh: 'సిక్కు',
+  secular: 'ఏ సంప్రదాయం లేదు',
+
+  checklistTitle: 'ఇది చేయాలి',
+  progressSuffix: 'దశలు పూర్తయ్యాయి',
+  phaseRightNow: 'ఇప్పుడే',
+  phaseToday: 'ఈరోజు',
+  phaseNextFewDays: 'రాబోయే కొన్ని రోజుల్లో',
+  phaseNextFewWeeks: 'కొన్ని వారాల్లో',
+  taskNotStarted: 'ప్రారంభం కాలేదు',
+  taskInProgress: 'జరుగుతోంది',
+  taskDone: 'పూర్తయింది',
+  callForHelp: 'సహాయం కోసం కాల్ చేయండి',
+
+  whyThisIsNeeded: 'ఇది ఎందుకు అవసరం',
+  documentsNeeded: 'అవసరమైన పత్రాలు',
+  addLater: 'తర్వాత జోడించండి',
+  attached: 'జోడించబడింది',
+  callNow: 'ఇప్పుడే కాల్ చేయండి',
+  markDone: 'పూర్తయిందని గుర్తు పెట్టండి',
+  markUndone: 'ఇంకా పూర్తి కాలేదు',
+  skipTask: 'మాకు వర్తించదు',
+  undoSkip: 'తిరిగి తీసుకురండి',
+  taskDoneCaption: 'పూర్తయింది. ఒక ఆందోళన తగ్గింది.',
+  taskSkippedCaption: 'సరే, దాటవేయబడింది.',
+  openInMaps: 'దగ్గరలో వెతకండి',
+  urgencyNote: 'గమనిక',
+
+  unexpectedTitle: 'ఇది ఊహించనిదా లేదా ప్రమాదవశాత్తు జరిగినదా?',
+  unexpectedHelp: 'అవును అయితే, మేము పోలీసు నివేదిక దశను జోడిస్తాము. ఖచ్చితంగా తెలియకపోతే వదిలేయండి.',
+  yes: 'అవును',
+  no: 'కాదు',
+  privacyLine: 'నమోదు అవసరం లేదు. ఏదీ ఈ పరికరం నుండి బయటికి వెళ్లదు.',
+  phaseComingMonths: 'రాబోయే నెలల్లో',
+  localSearchesTitle: 'దగ్గరలో వెతకండి',
+  nationalContactsTitle: 'ధృవీకరించిన సహాయవాణులు',
+
+  contactsTitle: 'మీరు కాల్ చేయగలిగినవారు',
+  call: 'కాల్',
+
+  vaultTitle: 'మీ పత్రాలు',
+  vaultHelp: 'మీరు మాత్రమే వీటిని చూడగలరు.',
+  enterPhone: 'మీ మొబైల్ నంబర్ నమోదు చేయండి',
+  sendOtp: 'కోడ్ పంపండి',
+  enterOtp: '6-అంకెల కోడ్‌ను నమోదు చేయండి',
+  otpHint: 'పరీక్ష కోసం 123456 ఉపయోగించండి.',
+  verify: 'ధృవీకరించండి',
+  addDocument: 'పత్రం జోడించండి',
+  takePhoto: 'ఫోటో తీయండి',
+  chooseFromLibrary: 'గ్యాలరీ నుండి ఎంచుకోండి',
+  docAadhaar: 'ఆధార్',
+  docId: 'గుర్తింపు కార్డు',
+  docInsurance: 'బీమా పత్రం',
+  docHospital: 'ఆసుపత్రి పత్రాలు',
+  remove: 'తొలగించండి',
+
+  shareTitle: 'కుటుంబం కోసం సందేశం',
+  shareHelp: 'మేము ప్రశాంతమైన సందేశాన్ని సిద్ధం చేశాము. కావాలంటే మార్చండి.',
+  timeLabel: 'అంతిమ సంస్కారం సమయం',
+  placeLabel: 'అంతిమ సంస్కారం స్థలం',
+  nameLabel: 'పంపేవారు (కుటుంబం పేరు)',
+  openWhatsApp: 'వాట్సాప్‌లో తెరవండి',
+
+  settingsTitle: 'సెట్టింగ్‌లు',
+  changeLanguage: 'భాష',
+  changeLocation: 'స్థానం మార్చండి',
+  startOver: 'కొత్త జాబితా ప్రారంభించండి',
+  clearAll: 'ఈ పరికరం నుండి అన్నింటినీ తొలగించండి',
+  clearConfirm: 'సేవ్ చేసిన మొత్తం సమాచారం తొలగించబడుతుంది. ఖచ్చితంగానా?',
+  cancel: 'రద్దు',
+  yesClear: 'అవును, అన్నింటినీ తొలగించండి',
+  reminders: 'రిమైండర్‌లు',
+  remindersHelp: 'శబ్దం లేని నిశ్శబ్ద సూచనలు.',
+  enableReminders: 'రిమైండర్‌లను ఆన్ చేయండి',
+  remindersOn: 'రిమైండర్‌లు ఆన్‌లో ఉన్నాయి',
+};
+
+const DICTS: Record<Lang, Dict> = { en, hi, ta, kn, te };
 const KEY = 'lang';
 
 let current: Lang = 'en';
@@ -322,7 +528,7 @@ const listeners = new Set<() => void>();
 
 export async function initLang() {
   const stored = await AsyncStorage.getItem(KEY);
-  if (stored === 'hi' || stored === 'ta' || stored === 'en') {
+  if (stored === 'hi' || stored === 'ta' || stored === 'kn' || stored === 'te' || stored === 'en') {
     current = stored;
   }
 }
@@ -357,4 +563,6 @@ export const LANG_LABELS: Record<Lang, string> = {
   en: 'English',
   hi: 'हिन्दी (Hindi)',
   ta: 'தமிழ் (Tamil)',
+  kn: 'ಕನ್ನಡ (Kannada)',
+  te: 'తెలుగు (Telugu)',
 };

@@ -18,7 +18,7 @@ import { LANG_LABELS, useI18n, type Lang } from '@/src/i18n';
 import { clearSession, loadSession, updateSession } from '@/src/session';
 import { BackButton, PrimaryButton, GhostButton } from '@/src/components/Buttons';
 
-const LANGS: Lang[] = ['en', 'hi', 'ta'];
+const LANGS: Lang[] = ['en', 'hi', 'ta', 'kn', 'te'];
 
 export default function Settings() {
   const router = useRouter();
