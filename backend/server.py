@@ -372,10 +372,13 @@ async def share_message(req: ShareRequest):
 
 app.include_router(api_router)
 
+_cors_origins = os.environ.get("CORS_ORIGINS", "*")
+_allow_origins = [o.strip() for o in _cors_origins.split(",")] if _cors_origins != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=_allow_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
